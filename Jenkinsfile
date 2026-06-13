@@ -3,28 +3,25 @@ pipeline {
     environment {
         IMAGE_NAME = "mindtreerepo"
         IMAGE_TAG  = "${BUILD_NUMBER}"
-	    IMAGE_REPO="public.ecr.aws/y5h2u1j4/mindtree"
- 
+	    IMAGE_REPO="public.ecr.aws/o1y6s3b7/mindtree"
     }
- 
     stages {
- 
         stage('Checkout Code') {
             steps {
                 echo "Checking out source code"
-                git 'https://github.com/Sudharsan0011/CICD_PROJECT'
+                git 'https://github.com/RahulLTM/project-repo'
                 sh 'sudo chown jenkins:jenkins /var/lib/jenkins/efs'
                 sh 'sudo cp -r * /var/lib/jenkins/efs'
                 sh 'sudo chown jenkins:jenkins /var/lib/jenkins/efs/*'
+                sh 'ls -al'
             }
         }
- 
         stage('Build Application (Java + Maven)') {
             agent { label 'build' }
- 
             steps {
- 
                 sh '''
+                    ls -al 
+                    pwd
                     sudo chown jenkins:jenkins /home/jenkins/build
                     sudo chmod 777 /home/jenkins/build
                     cd /home/jenkins/build
@@ -36,20 +33,19 @@ pipeline {
                 '''
             }
         }
- 
         stage('Build & Push Docker Image') {
             agent { label 'docker' }
             steps {
                 sh '''
-                    sudo chown jenkins:jenkins /home/jenkins/docker
-                    sudo chmod 777 /home/jenkins/docker
-                    cd /home/jenkins/docker
+                    sudo chown jenkins:jenkins /home/jenkins/workspace
+                    sudo chmod 777 /home/jenkins/workspace
+                    cd /home/jenkins/workspace
                     ls -al
-                    sudo chown jenkins:jenkins /home/jenkins/docker/*
+                    sudo chown jenkins:jenkins /home/jenkins/workspace/*
                     docker build -t ${IMAGE_NAME}:${IMAGE_TAG} .
-                    aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws/y5h2u1j4
-                    docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${IMAGE_REPO}:${IMAGE_TAG}
-                    docker push ${IMAGE_REPO}:${IMAGE_TAG}
+                    aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws/o1y6s3b7
+                    docker tag ${IMAGE_NAME}:${IMAGE_TAG} public.ecr.aws/o1y6s3b7/mindtree:latest
+                    docker push public.ecr.aws/o1y6s3b7/mindtree:latest
                 '''
             }
         }
@@ -57,17 +53,15 @@ pipeline {
             agent { label 'docker' }
             steps {
                 sh '''
-				 cd /home/jenkins/docker
+		 cd /home/jenkins/workspace
                  sudo kubectl delete deployment tomcat --ignore-not-found=true
                  sudo kubectl delete pods --all --force --grace-period=0
                  sudo kubectl apply -f deployment.yml
-                 sudo kubectl set image deployment/tomcat mindtreerepo="${IMAGE_REPO}:${IMAGE_TAG}" --record
+                 sudo kubectl set image deployment/tomcat mindtree="${IMAGE_REPO}:${IMAGE_TAG}" --record
                  sudo kubectl apply -f svc.yml
               '''
             }
         }
- 
-        
+
     }
- 
 }
